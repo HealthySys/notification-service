@@ -20,6 +20,7 @@ public class Notification {
     private String severity;   // INFO, WARNING, CRITICAL
     private Long patientId;
     private String patientName;
+    private String correlationId;
     private LocalDateTime timestamp;
 
     public static Notification fromEvent(java.util.Map<String, Object> event) {
@@ -31,9 +32,9 @@ public class Notification {
                 .title(severity.equals("CRITICAL") ? "ALERTA DE EMERGENCIA" : "Notificacao")
                 .message(String.valueOf(event.getOrDefault("message", "")))
                 .severity(severity)
-                .patientId(event.containsKey("patientId")
-                        ? Long.parseLong(String.valueOf(event.get("patientId"))) : null)
+                .patientId(event.get("patientId") instanceof Number number ? number.longValue() : null)
                 .patientName(String.valueOf(event.getOrDefault("patientName", "")))
+                .correlationId(String.valueOf(event.getOrDefault("correlationId", "")))
                 .timestamp(LocalDateTime.now())
                 .build();
     }

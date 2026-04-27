@@ -7,7 +7,9 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Deque;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedDeque;
 
 @Service
@@ -16,6 +18,8 @@ public class NotificationTimelineService {
     private static final int MAX_NOTIFICATIONS = 100;
 
     private final Deque<Notification> notifications = new ConcurrentLinkedDeque<>();
+    private final Set<String> processedIds = ConcurrentHashMap.newKeySet();
+    private final Set<String> queuedTriageEvents = ConcurrentHashMap.newKeySet();
 
     public Notification register(Notification notification) {
         if (notification.getId() == null || notification.getId().isBlank()) {
@@ -35,11 +39,27 @@ public class NotificationTimelineService {
         return notification;
     }
 
+    public boolean markProcessed(String messageId) {
+        if (messageId == null || messageId.isBlank()) {
+            return true;
+        }
+        return processedIds.add(messageId);
+    }
+
+    public boolean markTriageEventQueued(String correlationId) {
+        if (correlationId == null || correlationId.isBlank()) {
+            return true;
+        }
+        return queuedTriageEvents.add(correlationId);
+    }
+
     public List<Notification> findAll() {
         return new ArrayList<>(notifications);
     }
 
     public void clear() {
         notifications.clear();
+        processedIds.clear();
+        queuedTriageEvents.clear();
     }
 }
