@@ -2,8 +2,7 @@ package br.unifor.healthsys.notification.messaging;
 
 import br.unifor.healthsys.notification.model.Notification;
 import br.unifor.healthsys.notification.service.NotificationTimelineService;
-import org.springframework.amqp.rabbit.core.RabbitTemplate;
-import org.springframework.amqp.rabbit.annotation.RabbitListener;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.kafka.annotation.KafkaListener;
@@ -14,33 +13,22 @@ import java.util.Map;
 
 @Component
 public class NotificationConsumer {
+
     private static final Logger log = LoggerFactory.getLogger(NotificationConsumer.class);
 
-    private final RabbitTemplate rabbitTemplate;
+    private final NotificationEventProducer eventProducer;
     private final SimpMessagingTemplate messagingTemplate;
     private final NotificationTimelineService notificationTimelineService;
+    private final ObjectMapper objectMapper;
 
-    public NotificationConsumer(RabbitTemplate rabbitTemplate,
+    public NotificationConsumer(NotificationEventProducer eventProducer,
                                 SimpMessagingTemplate messagingTemplate,
-                                NotificationTimelineService notificationTimelineService) {
-        this.rabbitTemplate = rabbitTemplate;
+                                NotificationTimelineService notificationTimelineService,
+                                ObjectMapper objectMapper) {
+        this.eventProducer = eventProducer;
         this.messagingTemplate = messagingTemplate;
         this.notificationTimelineService = notificationTimelineService;
-    }
-
-    @RabbitListener(queues = "notifications.queue")
-    public void consumeNotification(Notification notification) {
-        if (!notificationTimelineService.markProcessed(notification.getId())) {
-            log.warn("Mensagem RabbitMQ duplicada descartada. id={}", notification.getId());
-            return;
-        }
-
-        notificationTimelineService.register(notification);
-        messagingTemplate.convertAndSend("/topic/notifications", notification);
-        if ("CRITICAL".equals(notification.getSeverity())) {
-            messagingTemplate.convertAndSend("/topic/alerts", notification);
-            log.warn("Alerta critico broadcast: {}", notification.getMessage());
-        }
+        this.objectMapper = objectMapper;
     }
 
     @KafkaListener(topics = "triagem-events", groupId = "notification-triage-group")
@@ -65,8 +53,25 @@ public class NotificationConsumer {
                 .patientId(event.get("patientId") instanceof Number number ? number.longValue() : null)
                 .build();
 
-        rabbitTemplate.convertAndSend("notifications.exchange", "notifications", notification);
-        log.info("Evento de triagem encaminhado ao RabbitMQ para notificacao. correlationId={}", correlationId);
+        eventProducer.publish(notification);
+        log.info("Evento de triagem encaminhado ao Kafka para notificacao. correlationId={}", correlationId);
+    }
+
+    @KafkaListener(topics = NotificationEventProducer.NOTIFICATIONS_TOPIC, groupId = "notification-broadcast-group")
+    public void consumeNotification(Map<String, Object> payload) {
+        Notification notification = objectMapper.convertValue(payload, Notification.class);
+
+        if (!notificationTimelineService.markProcessed(notification.getId())) {
+            log.warn("Notificacao duplicada descartada. id={}", notification.getId());
+            return;
+        }
+
+        notificationTimelineService.register(notification);
+        messagingTemplate.convertAndSend("/topic/notifications", notification);
+        if ("CRITICAL".equals(notification.getSeverity())) {
+            messagingTemplate.convertAndSend("/topic/alerts", notification);
+            log.warn("Alerta critico broadcast: {}", notification.getMessage());
+        }
     }
 
     private boolean isCritical(String classification) {

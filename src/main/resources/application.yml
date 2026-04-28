@@ -6,6 +6,11 @@ spring:
     name: notification-service
   kafka:
     bootstrap-servers: localhost:9092
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+      properties:
+        spring.json.add.type.headers: false
     consumer:
       group-id: notification-service-group
       auto-offset-reset: earliest
@@ -14,9 +19,7 @@ spring:
       properties:
         spring.json.trusted.packages: "*"
         spring.json.value.default.type: java.util.Map
-  rabbitmq:
-    host: ${SPRING_RABBITMQ_HOST:localhost}
-    port: ${SPRING_RABBITMQ_PORT:5672}
+        spring.json.use.type.headers: false
 
 eureka:
   client:
