@@ -4,8 +4,16 @@ server:
 spring:
   application:
     name: notification-service
+  data:
+    mongodb:
+      uri: mongodb://admin:password@localhost:27017/notification_db?authSource=admin
   kafka:
     bootstrap-servers: localhost:9092
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+      properties:
+        spring.json.add.type.headers: false
     consumer:
       group-id: notification-service-group
       auto-offset-reset: earliest
@@ -14,6 +22,7 @@ spring:
       properties:
         spring.json.trusted.packages: "*"
         spring.json.value.default.type: java.util.Map
+        spring.json.use.type.headers: false
 
 eureka:
   client:
@@ -26,4 +35,13 @@ management:
   endpoints:
     web:
       exposure:
-        include: health,info,metrics
+        include: health,info,metrics,prometheus
+
+springdoc:
+  api-docs:
+    path: /api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+
+jwt:
+  public-key-location: ${JWT_PUBLIC_KEY_LOCATION:classpath:keys/public.pem}
