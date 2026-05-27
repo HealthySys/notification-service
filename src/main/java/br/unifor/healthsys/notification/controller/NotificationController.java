@@ -73,13 +73,6 @@ public class NotificationController {
         ));
     }
 
-    @DeleteMapping
-    @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<Void> clear() {
-        notificationTimelineService.clear();
-        return ResponseEntity.noContent().build();
-    }
-
     @MessageMapping("/ping")
     @SendTo("/topic/pong")
     public String handlePing(String message) {

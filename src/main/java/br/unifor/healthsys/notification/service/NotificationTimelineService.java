@@ -46,7 +46,4 @@ public class NotificationTimelineService {
         return repository.findVisibleForRole(role, pageable);
     }
 
-    public void clear() {
-        repository.deleteAll();
-    }
 }
