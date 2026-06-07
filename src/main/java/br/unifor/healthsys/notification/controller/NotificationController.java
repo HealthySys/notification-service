@@ -3,6 +3,8 @@ package br.unifor.healthsys.notification.controller;
 import br.unifor.healthsys.notification.messaging.NotificationEventProducer;
 import br.unifor.healthsys.notification.model.Notification;
 import br.unifor.healthsys.notification.service.NotificationTimelineService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -19,6 +21,7 @@ import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/notifications")
+@Tag(name = "Notificações", description = "Timeline de notificações e broadcast de eventos clínicos")
 public class NotificationController {
 
     private final NotificationEventProducer eventProducer;
@@ -31,6 +34,7 @@ public class NotificationController {
     }
 
     @GetMapping
+    @Operation(summary = "Lista notificações por perfil", description = "Retorna a timeline paginada para o perfil do usuário. Paginação via cabeçalhos X-Total-Count/X-Page/X-Page-Size.")
     @PreAuthorize("hasAnyRole('MEDICO','ENFERMEIRO')")
     public ResponseEntity<List<Notification>> findAll(
             @RequestParam(name = "page", defaultValue = "0") int page,
@@ -59,6 +63,7 @@ public class NotificationController {
     }
 
     @PostMapping("/broadcast")
+    @Operation(summary = "Publica uma notificação", description = "Envia uma notificação para o tópico de eventos, distribuída em tempo real via WebSocket.")
     @PreAuthorize("hasAnyRole('MEDICO','ENFERMEIRO','ADMIN')")
     public ResponseEntity<Map<String, Object>> broadcast(@RequestBody Notification notification) {
         if (notification.getId() == null || notification.getId().isBlank()) {
